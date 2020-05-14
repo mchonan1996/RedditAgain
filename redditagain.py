@@ -7,6 +7,7 @@ import os
 import getpass
 
 import praw
+from praw.errors import NotFound
 
 USER_AGENT = 'RedditAgain by /u/karangoeluw // github: karan'
 
@@ -34,24 +35,24 @@ def format_time(created):
 # Ask the user for a decision. 'y' and 'Y' will evaluate to True, anything else will equate to False.
 # A better implementation is welcome, it's just a quick-n-dirty slap-together job! -ChainsawPolice
 def y_or_n(decision):
-    if decision.lower() == 'y': 
+    if decision.lower() == 'y':
         return True
-    else:                   
+    else:
         return False
 
 
 if __name__ == '__main__':
-    print '>> Login to OLD account..'
+    print('>> Login to OLD account..')
 
     old_r = praw.Reddit(USER_AGENT)  # praw.Reddit
     old_r.login()
 
-    print '\t>>Login successful..'
+    print('\t>>Login successful..')
     old_user = old_r.user  # get a praw.objects.LoggedInRedditor object
 
-    print 'Would you like to remove all your old comments? (y/n)'
-    if y_or_n(raw_input('> ')) == True:
-        print '>> Saving and editing all comments...'
+    print('Would you like to remove all your old comments? (y/n)')
+    if y_or_n(input('> ')) == True:
+        print('>> Saving and editing all comments...')
 
         comment_file, comment_csv = csv_file(
             '{}_comments.csv'.format(old_user.name),
@@ -71,13 +72,13 @@ if __name__ == '__main__':
                         removed += 1
                         print_dot()
                     except Exception as e:
-                        print 'Failed to store', link
-                        print e
-        print '\n\t>> Saved to {0}_comments.csv'.format(old_user.name)
+                        print('Failed to store', link)
+                        print(e)
+        print('\n\t>> Saved to {0}_comments.csv'.format(old_user.name))
 
-    print 'Would you like to remove all your old submissions? (y/n)'
-    if y_or_n(raw_input('> ')) == True:
-        print '>> Saving and editing all submissions...'
+    print('Would you like to remove all your old submissions? (y/n)')
+    if y_or_n(input('> ')) == True:
+        print('>> Saving and editing all submissions...')
         submission_header = ['Title', "Body/Link", "Created", "Karma"]
         submission_file, submission_csv = csv_file(
             '{}_submissions.csv'.format(old_user.name),
@@ -100,22 +101,22 @@ if __name__ == '__main__':
                         removed += 1
                         print_dot()
                     except Exception as e:
-                        print 'Failed to store', submission
-                        print e
-        print '\n\t>> Saved to {0}_submissions.csv'.format(old_user.name)
+                        print('Failed to store', submission)
+                        print(e)
+        print('\n\t>> Saved to {0}_submissions.csv'.format(old_user.name))
 
-    print '>> Preparing to migrate subscriptions.'
+    print('>> Preparing to migrate subscriptions.')
     subs = old_r.get_my_subreddits(limit=None)
 
     new_r = praw.Reddit(USER_AGENT)
-    new_username = raw_input('>> Enter username of new account: ')
+    new_username = input('>> Enter username of new account: ')
 
     while True:
         new_pass = getpass.getpass(
             '\t>> Enter password for `{}`: '.format(new_username))
         new_pass2 = getpass.getpass('\t>> Retype password to confirm: ')
         if new_pass != new_pass2:
-            print 'Passwords do not match!'
+            print('Passwords do not match!')
         else:
             break
 
@@ -126,14 +127,19 @@ if __name__ == '__main__':
     new_r.login(new_username, new_pass)
 
     new_user = new_r.user  # get a praw.objects.LoggedInRedditor object
-    print '\t>>Login successful..'
+    print('\t>>Login successful..')
 
-    print '>> Migrating subscriptions...'
+    print('>> Migrating subscriptions...')
     for sub in subs:
-        new_r.get_subreddit(sub.display_name).subscribe()
-        old_r.get_subreddit(sub.display_name).unsubscribe()
-        print_dot()
-    print '\n\t>> Done migrating.'
+        try:
+            print('Migrating: %s' % sub.display_name)
+            new_r.get_subreddit(sub.display_name).subscribe()
+            old_r.get_subreddit(sub.display_name).unsubscribe()
+            print('✓ ')
+        except NotFound:
+            print('✗ ')
 
-    print '>> Go to https://ssl.reddit.com/prefs/delete/',
-    print 'to delete your old account.'
+    print('\n\t>> Done migrating.')
+
+    print('>> Go to https://ssl.reddit.com/prefs/delete/',)
+    print('to delete your old account.')
